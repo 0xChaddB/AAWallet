@@ -15,6 +15,7 @@ contract MinimalAccount is IAccount, Ownable {
     //////////////////////////////////////////////////////////////*/
     error MinimalAccount__NotFromEntryPoint();
     error MinimalAccount__NotFromEntryPoint();
+    error MinimalAccount__CallFailed(bytes);
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -42,13 +43,17 @@ contract MinimalAccount is IAccount, Ownable {
         i_entryPoint = IEntryPoint(entryPoint);
     }
 
+    receive() external payable {}
+
     /*//////////////////////////////////////////////////////////////
                            EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     
-    function execute(address dest, uint256 value, bytes calldata data) external {
-        e
-
+    function execute(address dest, uint256 value, bytes calldata data) external requireFromEntryPointOrOwner {
+        (bool success, bytes memory result) = dest.call{value: value}(functionData);
+        if (!success) {
+            revert MinimalAccount__CallFailed(result);
+        }
     }
     // A signature is valid, if its the MinimalAccount contract owner 
     function validateUserOp(
