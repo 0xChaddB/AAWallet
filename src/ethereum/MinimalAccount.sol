@@ -7,15 +7,32 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS} from "lib/account-abstraction/contracts/core/Helpers.sol";
-import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 contract MinimalAccount is IAccount, Ownable {
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    error MinimalAccount__NotFromEntryPoint();
     error MinimalAccount__NotFromEntryPoint();
 
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
     IEntryPoint immutable private i_entryPoint;
 
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
     modifier requireFromEntryPoint() {
         if (msg.sender != address(i_entryPoint)) {
+            revert MinimalAccount__NotFromEntryPoint();
+        }
+        _;
+    }
+
+    modifier requireFromEntryPointOrOwner() {
+        if (msg.sender != address(i_entryPoint) && msg.sender != owner()) {
             revert MinimalAccount__NotFromEntryPoint();
         }
         _;
@@ -25,6 +42,14 @@ contract MinimalAccount is IAccount, Ownable {
         i_entryPoint = IEntryPoint(entryPoint);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                           EXTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+    
+    function execute(address dest, uint256 value, bytes calldata data) external {
+        e
+
+    }
     // A signature is valid, if its the MinimalAccount contract owner 
     function validateUserOp(
         PackedUserOperation calldata userOp,
@@ -35,6 +60,10 @@ contract MinimalAccount is IAccount, Ownable {
         // _validateNonce();
         _payPrefund(missingAccountFunds);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                           INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     // EIP-191 version of the signed hash
     function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash) 
@@ -62,7 +91,7 @@ contract MinimalAccount is IAccount, Ownable {
                             GETTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function getEntryPoint() public view returns (IEntryPoint) {
+    function getEntryPoint() public view returns (address) {
         return i_entryPoint;
     }
 
