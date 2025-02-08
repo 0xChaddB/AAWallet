@@ -14,7 +14,7 @@ contract MinimalAccount is IAccount, Ownable {
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
     error MinimalAccount__NotFromEntryPoint();
-    error MinimalAccount__NotFromEntryPoint();
+    error MinimalAccount__NotFromEntryPointOrOwner();
     error MinimalAccount__CallFailed(bytes);
 
     /*//////////////////////////////////////////////////////////////
@@ -49,7 +49,7 @@ contract MinimalAccount is IAccount, Ownable {
                            EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     
-    function execute(address dest, uint256 value, bytes calldata data) external requireFromEntryPointOrOwner {
+    function execute(address dest, uint256 value, bytes calldata functionData) external requireFromEntryPointOrOwner {
         (bool success, bytes memory result) = dest.call{value: value}(functionData);
         if (!success) {
             revert MinimalAccount__CallFailed(result);
@@ -61,7 +61,7 @@ contract MinimalAccount is IAccount, Ownable {
         bytes32 userOpHash,
         uint256 missingAccountFunds
     ) external returns (uint256 validationData) {
-        _validateSignature(userOp, userOpHash);
+        validationData = _validateSignature(userOp, userOpHash);
         // _validateNonce();
         _payPrefund(missingAccountFunds);
     }
@@ -76,7 +76,7 @@ contract MinimalAccount is IAccount, Ownable {
         view 
         returns (uint256 validationData) 
     {
-        bytes32 hash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
+        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
         address signer = ECDSA.recover(ethSignedMessageHash, userOp.signature);
         if (signer != owner()) {
             return SIG_VALIDATION_FAILED;
@@ -97,7 +97,7 @@ contract MinimalAccount is IAccount, Ownable {
     //////////////////////////////////////////////////////////////*/
 
     function getEntryPoint() public view returns (address) {
-        return i_entryPoint;
+        return address(i_entryPoint);
     }
 
     
