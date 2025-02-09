@@ -60,7 +60,7 @@ contract MinimalAccountTest is Test {
         // Act
         vm.prank(user);   
 
-        vm.expectRevert(MinimalAccount.MinimalAccount__NotFromEntryPoint.selector);
+        vm.expectRevert(MinimalAccount.MinimalAccount__NotFromEntryPointOrOwner.selector);
         minimalAccount.execute(dest, value, functionData);   
         console2.log(usdc.balanceOf(address(minimalAccount)));
     }
