@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;   
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console2} from "forge-std/Test.sol";
 import {MinimalAccount} from "src/ethereum/MinimalAccount.sol";
 import {DeployMinimal} from "script/DeployMinimal.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
@@ -23,7 +23,7 @@ contract MinimalAccountTest is Test {
 
     address user = makeAddr("user");
 
-    uint256 constant private AMOUNT = 1e18;
+    uint256 constant private AMOUNT = 100e18;
 
     function setUp() public {
         DeployMinimal deployer = new DeployMinimal();
@@ -38,14 +38,14 @@ contract MinimalAccountTest is Test {
     // come from the entrypoint
 
     function testOwnerCanExecuteCommands() public {
-        //Arrange
+        // Arrange
         assertEq(usdc.balanceOf(address(minimalAccount)), 0);
-        uint256 value = 0;
         address dest = address(usdc);
+        uint256 value = 0;
         bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(minimalAccount), AMOUNT);
         // Act
-        vm.prank(minimalAccount.owner());     
-        minimalAccount.execute(dest, value, functionData);   
+        vm.prank(minimalAccount.owner());
+        minimalAccount.execute(dest, value, functionData);
 
         // Assert
         assertEq(usdc.balanceOf(address(minimalAccount)), AMOUNT);
@@ -62,6 +62,7 @@ contract MinimalAccountTest is Test {
 
         vm.expectRevert(MinimalAccount.MinimalAccount__NotFromEntryPoint.selector);
         minimalAccount.execute(dest, value, functionData);   
+        console2.log(usdc.balanceOf(address(minimalAccount)));
     }
 
     
@@ -71,12 +72,12 @@ contract MinimalAccountTest is Test {
         uint256 value = 0;
         address dest = address(usdc);
         bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(minimalAccount), AMOUNT);
-
+        console2.log(usdc.balanceOf(address(minimalAccount)));
         bytes memory executeCallData = 
             abi.encodeWithSelector(MinimalAccount.execute.selector, dest, value, functionData);
 
         PackedUserOperation memory packedUserOp = 
-            sendPackedUserOp.generatedSignedUserOperation(executeCallData, helperConfig.getConfig());
+            sendPackedUserOp.generateSignedUserOperation(executeCallData, helperConfig.getConfig(), address(minimalAccount));
         bytes32 userOperationHash = IEntryPoint(helperConfig.getConfig().entryPoint).getUserOpHash(packedUserOp);
 
 
@@ -87,8 +88,30 @@ contract MinimalAccountTest is Test {
         assertEq(actualSigner,minimalAccount.owner());
     }
 
-
+    // 1. Sign user ops
+    // 2. Call validate userops
+    // 3. Assert the return is correct
     function testValidationOfUserOps() public {
+        // Arrange
+        assertEq(usdc.balanceOf(address(minimalAccount)), 0);
+        address dest = address(usdc);
+        uint256 value = 0;
+        bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(minimalAccount), AMOUNT);
+        bytes memory executeCallData =
+            abi.encodeWithSelector(MinimalAccount.execute.selector, dest, value, functionData);
+        PackedUserOperation memory packedUserOp = 
+            sendPackedUserOp.generateSignedUserOperation(executeCallData, helperConfig.getConfig(), address(minimalAccount)
+        );
+        bytes32 userOperationHash = IEntryPoint(helperConfig.getConfig().entryPoint).getUserOpHash(packedUserOp);
+        uint256 missingAccountFunds = 1e18;
+        console2.log(usdc.balanceOf(address(minimalAccount)));
+        // Act
+        vm.prank(helperConfig.getConfig().entryPoint);
+        uint256 validationData = minimalAccount.validateUserOp(packedUserOp, userOperationHash, missingAccountFunds);
+        assertEq(validationData, 0);
+    }
+                              
+    function testEntryPointCanExecuteCommands() public {
 
     }
 }
